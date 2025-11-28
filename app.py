@@ -5,7 +5,7 @@ import urllib.parse
 
 # --- 1. CONFIGURACIÓN ---
 st.set_page_config(
-    page_title="CS Naves Industriales V2.1",
+    page_title="CS Naves Industriales V2.2",
     page_icon="🏭",
     layout="centered",
     initial_sidebar_state="expanded"
@@ -24,15 +24,12 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # --- 3. INICIALIZACIÓN DE VARIABLES (BLINDADA) ---
-# Aseguramos que todas las llaves existan desde el inicio para evitar KeyError
 if 'project_data' not in st.session_state:
     st.session_state['project_data'] = {'nombre': '', 'ubicacion': '', 'alt': 0, 'temp': 25}
-
 if 'calc_res' not in st.session_state:
-    st.session_state['calc_res'] = {} # Almacena resultados de caudal
-
+    st.session_state['calc_res'] = {} 
 if 'louver_res' not in st.session_state:
-    st.session_state['louver_res'] = {} # Almacena resultados de louvers
+    st.session_state['louver_res'] = {} 
 
 # --- 4. BASES DE DATOS ---
 db_ach = {
@@ -66,7 +63,6 @@ db_geo = {
 
 def get_louver_free_area(width_in, height_in):
     # Área bruta en ft2
-    # Factor de eficiencia aprox 0.45 - 0.67 dependiendo tamaño (basado en tu tabla)
     if width_in < 12 or height_in < 12: return 0
     # Fórmula de regresión ajustada a tabla de L. Galvanizada
     area_val = ((width_in - 4.0) * (height_in - 2.5)) / 144 * 0.67
@@ -109,7 +105,6 @@ with st.sidebar:
             alt_val = st.number_input("Altitud (msnm)", 0)
             temp_val = st.number_input("Temperatura (°C)", 25)
         
-        # Guardamos en Session State
         st.session_state['project_data'] = {
             "nombre": nombre_proyecto,
             "ubicacion": f"{ciudad_selec}, {estado_selec}" if pais == "México" else ciudad_selec,
@@ -190,14 +185,14 @@ with tab1:
 
 # --- TAB 2: LOUVERS ---
 with tab2:
-    # Verificamos si el diccionario tiene datos, no si es True/False
+    # Verificación segura con .get()
     if st.session_state['calc_res'].get('q_total', 0) > 0:
         q_total = st.session_state['calc_res']['q_total']
-        num_ex = st.session_state['calc_res']['qty'] # Corregido nombre clave
+        num_ex = st.session_state['calc_res']['qty'] 
         
         st.info(f"Caudal Total a Reponer: **{q_total:,} CFM**")
         
-        tipo_ent = st.radio("Tipo de Entrada de Aire", ["Louvers de Admisión", "Entrada Natural (Portones/Huecos)"])
+        tipo_entrada = st.radio("Tipo de Entrada de Aire", ["Louvers de Admisión", "Entrada Natural (Portones/Huecos)"])
         
         vel_louver = 0
         sp_louver = 0.0
@@ -223,6 +218,8 @@ with tab2:
             
             if area_libre_total > 0:
                 vel_louver = q_total / area_libre_total
+            else:
+                vel_louver = 0
             
             st.metric("Velocidad de Paso Resultante", f"{int(vel_louver)} FPM")
             
@@ -231,6 +228,7 @@ with tab2:
             else:
                 st.markdown('<div class="danger-box">⛔ <strong>VELOCIDAD EXCESIVA (>1050)</strong></div>', unsafe_allow_html=True)
             
+            # Fórmula cuadrática ajustada
             sp_louver = (vel_louver / 2350) ** 2
             st.caption(f"Caída de Presión Estimada: {sp_louver:.3f} in wg")
             
@@ -240,8 +238,8 @@ with tab2:
             
         if st.button("✅ Confirmar Entrada"):
             st.session_state['louver_res'] = {
-                "tipo": tipo_ent,
-                "dims": f"{cant_louvers} pzas de {w_louver}\"x{h_louver}\"" if tipo_ent == "Louvers de Admisión" else "Natural",
+                "tipo": tipo_entrada,
+                "dims": f"{cant_louvers} pzas de {w_louver}\"x{h_louver}\"" if tipo_entrada == "Louvers de Admisión" else "Natural",
                 "vel": int(vel_louver),
                 "sp": sp_louver
             }
@@ -252,7 +250,7 @@ with tab2:
 
 # --- TAB 3: SELECCIÓN ---
 with tab3:
-    # Verificamos existencia de datos con .get() para evitar KeyError
+    # Verificación segura de existencia
     if st.session_state['louver_res'].get('sp', 0) > 0 or st.session_state['louver_res'].get('tipo') == "Entrada Natural (Portones/Huecos)":
         
         res_q = st.session_state['calc_res']
@@ -279,7 +277,7 @@ with tab3:
         
         st.markdown(f"""
         <div class="highlight">
-            <h4>Presión Estática Total (SP): {sp_total:.3f} in wg</h4>
+            <h3 style="margin:0; color:#333;">Presión Estática Total (SP): {sp_total:.3f} in wg</h3>
         </div>
         """, unsafe_allow_html=True)
         
